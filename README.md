@@ -17,11 +17,11 @@ This project builds a simple content-based music recommender. It compares each s
 
 ## How The System Works
 
-Real recommendation systems usually combine two ideas: collaborative filtering, which learns from other users' behavior, and content-based filtering, which uses song attributes. This simulator will start simple and focus on content-based filtering, so songs are scored by how well their genre, mood, and energy match the user profile.
+Real recommendation systems usually combine two ideas: collaborative filtering, which learns from patterns across many users such as likes, skips, playlists, and watch or listening time, and content-based filtering, which uses item attributes such as genre, mood, tempo, or energy. This simulator focuses on content-based filtering, so it recommends songs by comparing each song's attributes to one user's stated preferences. My version prioritizes genre, mood, and especially energy closeness, with a small acousticness penalty to avoid highly acoustic songs for users who do not want them.
 
 ### Data Plan
 
-The starter catalog has 10 songs with genre, mood, energy, tempo, valence, danceability, and acousticness. A simple extension would add a few more songs with different genres and moods so the catalog has more variety.
+The catalog now has 15 songs with genre, mood, energy, tempo, valence, danceability, and acousticness. I expanded it with additional genres and moods such as reggaeton, electronic, folk, dream pop, and hip hop so the recommender has more variety to compare.
 
 Prompt for Copilot Chat:
 
@@ -44,12 +44,13 @@ This should help the system separate intense rock from chill lofi.
 
 ### Algorithm Recipe
 
-- Add `+2.0` for a genre match.
-- Add `+1.0` for a mood match.
-- Add energy points based on closeness to the target energy.
-- Use smaller bonus points for other features like valence or danceability if needed.
+- Add points for a genre match.
+- Add points for a mood match.
+- Add a larger energy score based on how close the song's energy is to the user's target energy.
+- Apply a small penalty when a user does not like acoustic songs and the song's acousticness is very high.
+- Rank the full song list from highest score to lowest score.
 
-The scoring rule is for one song, and the ranking rule sorts all songs by score so the top matches come first.
+The scoring rule is for one song, and the ranking rule sorts all songs by score so the top matches come first. In the current implementation, the exact weights can shift by scoring mode, but the main idea stays the same: energy similarity matters most, while genre and mood help define the vibe.
 
 ### Flow
 
@@ -64,19 +65,26 @@ flowchart LR
 ### Bias Notes
 
 This system may over-favor genre if the dataset is small or uneven. It can also miss good songs that match mood and energy but not genre.
+It may also under-recommend newer genres if there are still only one or two examples of them in the catalog.
 
 ### Features Used In This Simulation
 
-`Song` fields used:
+`Song` object fields stored:
 - `id`, `title`, `artist`
 - `genre`, `mood`
 - `energy`, `tempo_bpm`, `valence`, `danceability`, `acousticness`
 
-`UserProfile` fields used:
+`UserProfile` object fields stored:
 - `favorite_genre`
 - `favorite_mood`
 - `target_energy`
 - `likes_acoustic`
+
+Features currently used for scoring:
+- `genre`
+- `mood`
+- `energy`
+- `acousticness`
 
 The basic idea is to score one song at a time, then rank all songs from best match to worst match.
 
@@ -129,7 +137,7 @@ Use this section to document the experiments you ran. For example:
 Sample CLI output:
 
 ```text
-Loaded songs: 10
+Loaded songs: 15
 Sunrise City | Score: 5.45
 Gym Hero | Score: 4.17
 Rooftop Lights | Score: 3.40
@@ -145,15 +153,15 @@ Screenshots included for submission:
 
 - High-Energy Pop recommendations:
 
-  ![High-Energy Pop recommendations](images/Screenshot%202026-04-12%20at%204.58.26%E2%80%AFPM.png)
+  ![High-Energy Pop recommendations](images/Screenshot%202026-04-12%20at%205.41.53%E2%80%AFPM.png)
 
 - Chill Lofi recommendations:
 
-  ![Chill Lofi recommendations](images/Screenshot%202026-04-12%20at%204.58.38%E2%80%AFPM.png)
+  ![Chill Lofi recommendations](images/Screenshot%202026-04-12%20at%205.42.10%E2%80%AFPM.png)
 
 - Deep Intense Rock recommendations:
 
-  ![Deep Intense Rock recommendations](images/Screenshot%202026-04-12%20at%204.58.53%E2%80%AFPM.png)
+  ![Deep Intense Rock recommendations](images/Screenshot%202026-04-12%20at%205.42.28%E2%80%AFPM.png)
 
 ---
 
@@ -169,7 +177,7 @@ Examples:
 - It could miss songs that match the mood but not the genre
 - It may reflect the taste of the person who made the data
 
-This system can also favor songs that look similar to the starter catalog.
+This system can also favor songs that look similar to the starter catalog, even after expansion.
 
 You will go deeper on this in your model card.
 
@@ -177,46 +185,27 @@ You will go deeper on this in your model card.
 
 ## Reflection
 
-Read and complete `model_card.md`:
-
 [**Model Card**](model_card.md)
 
-Write 1 to 2 paragraphs here about what you learned:
-
-- about how recommenders turn data into predictions
-- about where bias or unfairness could show up in systems like this
+The model card explains the final system in more detail, including the data, strengths, limitations, and bias notes.
 
 
 ## 7. Evaluation
 
-How did you check your system
-
-Examples:
-- You tried multiple user profiles and wrote down whether the results matched your expectations
-- You compared your simulation to what a real app like Spotify or YouTube tends to recommend
-- You wrote tests for your scoring logic
-
-You do not need a numeric metric, but if you used one, explain what it measures.
+I checked the system by running multiple user profiles and comparing the rankings to the vibe each profile was supposed to represent. High-Energy Pop, Chill Lofi, and Deep Intense Rock each produced different top results, which showed that the scoring logic was responding to genre, mood, and energy as expected. I also ran the starter tests and verified that the CLI printed readable recommendation tables.
 
 ---
 
 ## 8. Future Work
 
-If you had more time, how would you improve this recommender
-
-Examples:
-
-- Add support for multiple users and "group vibe" recommendations
-- Balance diversity of songs instead of always picking the closest match
-- Use more features, like tempo ranges or lyric themes
+If I had more time, I would expand the catalog, balance the genres and moods more evenly, and add more song features so the ranking has richer information to use. I would also improve diversity so the same songs or artists do not appear too often across different profiles.
 
 ---
 
 ## 9. Personal Reflection
 
-A few sentences about what you learned:
+What surprised me most was how much the ranking changed when I changed the scoring weights, even on a small catalog. A small rule change could move a song from the top to the middle of the list.
 
-- What surprised you about how your system behaved
-- How did building this change how you think about real music recommenders
-- Where do you think human judgment still matters, even if the model seems "smart"
+Building this made me think of real music recommenders as systems that make tradeoffs, not perfect predictors. They can match mood and genre well, but they still depend on limited data and simple assumptions.
 
+Human judgment still matters when deciding what songs should count as a good recommendation, whether the results feel fair, and whether the system is repeating the same patterns too often. A model can look smart, but people still need to check if the output actually makes sense.
