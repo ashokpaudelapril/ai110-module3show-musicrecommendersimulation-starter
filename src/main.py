@@ -1,15 +1,33 @@
-"""
-Command line runner for the Music Recommender Simulation.
+"""CLI runner for the Music Recommender.
 
-This file helps you quickly run and test your recommender.
-
-You will implement the functions in recommender.py:
-- load_songs
-- score_song
-- recommend_songs
+Usage:
+  python -m src.main                    # run preset experiments
+  python -m src.main --ai "DESCRIPTION" # AI-powered natural language mode
 """
+
+import argparse
+import logging
+import os
+from pathlib import Path
+
+from dotenv import load_dotenv
 
 from src.recommender import load_songs, recommend_songs
+
+load_dotenv()
+
+_LOG_FILE = Path(__file__).parent.parent / "recommender.log"
+_DATA_PATH = Path(__file__).parent.parent / "data" / "songs.csv"
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    handlers=[
+        logging.FileHandler(_LOG_FILE),
+        logging.StreamHandler(),
+    ],
+)
+logger = logging.getLogger(__name__)
 
 
 def print_recommendations(label: str, recommendations) -> None:
@@ -26,8 +44,63 @@ def print_recommendations(label: str, recommendations) -> None:
     print(border)
 
 
+def run_ai_mode(description: str, k: int = 5) -> None:
+    """Run recommendations using Gemini to parse a natural language description."""
+    try:
+        import google.generativeai as genai
+        from src.ai_assistant import explain_recommendations, parse_user_intent
+    except ImportError:
+        logger.error("google-generativeai package not installed — run: pip install google-generativeai")
+        print("Error: run `pip install google-generativeai` first.")
+        return
+
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        logger.error("GEMINI_API_KEY not set in environment or .env file")
+        print("Error: set GEMINI_API_KEY in your .env file or environment.")
+        return
+
+    genai.configure(api_key=api_key)
+    songs = load_songs(str(_DATA_PATH))
+    logger.info("Loaded %d songs from catalog", len(songs))
+
+    print(f"\nParsing: \"{description}\"")
+    try:
+        prefs = parse_user_intent(description)
+    except ValueError as exc:
+        logger.warning("Could not parse intent: %s", exc)
+        print(f"Could not understand request: {exc}")
+        return
+
+    print(
+        f"Preferences: genre={prefs['genre']}, mood={prefs['mood']}, "
+        f"energy={prefs['energy']:.2f}, likes_acoustic={prefs['likes_acoustic']}"
+    )
+
+    recommendations = recommend_songs(prefs, songs, k=k)
+    logger.info("Generated %d recommendations", len(recommendations))
+    print_recommendations(f"AI Recommendations for: \"{description}\"", recommendations)
+
+    explanation = explain_recommendations(description, prefs, recommendations)
+    print(f"\nAI Explanation:\n{explanation}\n")
+
+
 def main() -> None:
-    songs = load_songs("data/songs.csv")
+    parser = argparse.ArgumentParser(description="Music Recommender CLI")
+    parser.add_argument(
+        "--ai",
+        metavar="DESCRIPTION",
+        help="Describe what you want in natural language (uses Gemini)",
+    )
+    parser.add_argument("-k", type=int, default=5, help="Number of recommendations (default: 5)")
+    args = parser.parse_args()
+
+    if args.ai:
+        run_ai_mode(args.ai, k=args.k)
+        return
+
+    songs = load_songs(str(_DATA_PATH))
+    logger.info("Loaded %d songs from catalog", len(songs))
     print(f"Loaded songs: {len(songs)}")
 
     experiments = [
@@ -38,6 +111,7 @@ def main() -> None:
 
     for label, user_prefs, scoring_mode in experiments:
         recommendations = recommend_songs(user_prefs, songs, k=5, scoring_mode=scoring_mode)
+        logger.info("Experiment '%s': %d recommendations", label, len(recommendations))
         print_recommendations(f"Top recommendations for {label} ({scoring_mode}):", recommendations)
 
 

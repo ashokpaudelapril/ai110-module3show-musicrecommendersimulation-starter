@@ -2,16 +2,21 @@
 
 ## Project Summary
 
-In this project you will build and explain a small music recommender system.
+An AI-powered music recommender that combines **Retrieval-Augmented Generation (RAG)** with a
+content-based scoring engine. Users describe what they want in plain English; Claude parses
+their intent into structured preferences, the recommender retrieves the best matching songs
+from the catalog, and Claude explains why each song fits — all in a Streamlit UI.
 
-Your goal is to:
+### AI Feature: RAG + Agentic Workflow
 
-- Represent songs and a user "taste profile" as data
-- Design a scoring rule that turns that data into recommendations
-- Evaluate what your system gets right and wrong
-- Reflect on how this mirrors real world AI recommenders
+| Step | What happens |
+|------|-------------|
+| **Query understanding** | Gemini converts a free-text description into `{genre, mood, energy, likes_acoustic}` |
+| **Retrieval** | The scoring engine ranks every song against those preferences |
+| **Generation** | Claude reads the retrieved songs and writes a personalized explanation |
 
-This project builds a simple content-based music recommender. It compares each song to a user's preferences, such as favorite genre, mood, and target energy, and gives each song a score. Songs with higher scores are shown first. This simulates a small part of what real systems do at large scale.
+This is a complete RAG pipeline: Gemini never hallucinates song titles because it only
+reasons over catalog data that was retrieved first.
 
 ---
 
@@ -94,29 +99,56 @@ The basic idea is to score one song at a time, then rank all songs from best mat
 
 ### Setup
 
-1. Create a virtual environment (optional but recommended):
+1. Create and activate a virtual environment:
 
    ```bash
    python -m venv .venv
-   source .venv/bin/activate      # Mac or Linux
+   source .venv/bin/activate      # Mac / Linux
    .venv\Scripts\activate         # Windows
-  ```
+   ```
 
-2. Install dependencies
+2. Install dependencies:
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. Add your Gemini API key to a `.env` file in the project root:
+
+   ```
+   GEMINI_API_KEY=your-key-here
+   ```
+
+   Get a free key at [aistudio.google.com](https://aistudio.google.com). The `.env` file is
+   listed in `.gitignore` and will never be committed.
+
+### Running the App
+
+**Streamlit UI (recommended — AI-powered):**
 
 ```bash
-pip install -r requirements.txt
+streamlit run src/app.py
 ```
 
-3. Run the app:
+Open the URL printed in your terminal. Type a natural language description such as
+*"chill beats to study to"* and Claude will interpret your request, retrieve matching songs,
+and explain the recommendations.
+
+**CLI — preset experiments:**
 
 ```bash
 python -m src.main
 ```
 
-### Running Tests
+**CLI — AI natural language mode:**
 
-Run the starter tests with:
+```bash
+python -m src.main --ai "upbeat songs for the gym" -k 5
+```
+
+All runs write structured logs to `recommender.log` in the project root.
+
+### Running Tests
 
 ```bash
 pytest
