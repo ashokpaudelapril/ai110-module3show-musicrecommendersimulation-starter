@@ -1,0 +1,57 @@
+{
+  "happy": {
+    "description": "Uplifting, positive, feel-good energy. Songs that make you smile or want to move.",
+    "energy_hint": "Usually medium to high energy (0.6–0.9)",
+    "avoid": "Low-energy, slow, or melancholy tracks"
+  },
+  "chill": {
+    "description": "Relaxed and easygoing. No rush, no tension. Perfect for unwinding without falling asleep.",
+    "energy_hint": "Low to medium energy (0.2–0.5)",
+    "avoid": "Anything intense, loud, or fast-paced"
+  },
+  "intense": {
+    "description": "Powerful, driving, high-stakes energy. Music that pushes you to go harder.",
+    "energy_hint": "High energy (0.75–1.0)",
+    "avoid": "Anything slow, acoustic, or relaxed"
+  },
+  "relaxed": {
+    "description": "Calm and comfortable. More settled than chill — you're not just unwinding, you're fully at rest.",
+    "energy_hint": "Low energy (0.1–0.45)",
+    "avoid": "High tempo, energetic, or aggressive tracks"
+  },
+  "focused": {
+    "description": "Steady and non-distracting. Helps maintain concentration without boredom or interruption.",
+    "energy_hint": "Low to medium energy (0.3–0.55)",
+    "avoid": "Lyrics-heavy or highly emotional music"
+  },
+  "moody": {
+    "description": "Atmospheric and emotionally complex. Could be melancholy, nostalgic, or introspective. Not sad, but not cheerful either.",
+    "energy_hint": "Medium energy (0.4–0.75)",
+    "avoid": "Overly happy or neutral-feeling tracks"
+  },
+  "playful": {
+    "description": "Fun, lighthearted, and a bit cheeky. Doesn't take itself too seriously.",
+    "energy_hint": "Medium to high energy (0.6–0.9)",
+    "avoid": "Serious, intense, or slow tracks"
+  },
+  "warm": {
+    "description": "Comforting and cozy. Like a fireplace or a cup of tea — inviting and soft.",
+    "energy_hint": "Low to medium energy (0.2–0.5)",
+    "avoid": "Cold-sounding electronic or harsh production"
+  },
+  "dreamy": {
+    "description": "Hazy, floating, and somewhat otherworldly. Feels like being half-asleep or lost in thought.",
+    "energy_hint": "Low to medium energy (0.3–0.65)",
+    "avoid": "Sharp, rhythmically rigid, or aggressive tracks"
+  },
+  "confident": {
+    "description": "Bold, assured, and self-possessed. Music that makes you feel capable and in control.",
+    "energy_hint": "Medium to high energy (0.6–0.85)",
+    "avoid": "Anxious, tentative, or sad-feeling music"
+  },
+  "tense": {
+    "description": "Edgy, anxious, or suspenseful. Creates a sense of forward momentum or unease — great for focus with urgency.",
+    "energy_hint": "Medium to high energy (0.6–0.9)",
+    "avoid": "Anything too relaxed or happy-sounding"
+  }
+}

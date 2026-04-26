@@ -47,20 +47,16 @@ def print_recommendations(label: str, recommendations) -> None:
 def run_ai_mode(description: str, k: int = 5) -> None:
     """Run recommendations using Gemini to parse a natural language description."""
     try:
-        import google.generativeai as genai
         from src.ai_assistant import explain_recommendations, parse_user_intent
     except ImportError:
-        logger.error("google-generativeai package not installed — run: pip install google-generativeai")
-        print("Error: run `pip install google-generativeai` first.")
+        logger.error("google-genai package not installed — run: pip install google-genai")
+        print("Error: run `pip install google-genai` first.")
         return
 
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
+    if not os.getenv("GEMINI_API_KEY"):
         logger.error("GEMINI_API_KEY not set in environment or .env file")
         print("Error: set GEMINI_API_KEY in your .env file or environment.")
         return
-
-    genai.configure(api_key=api_key)
     songs = load_songs(str(_DATA_PATH))
     logger.info("Loaded %d songs from catalog", len(songs))
 

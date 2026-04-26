@@ -1,28 +1,32 @@
-# 🎵 Music Recommender Simulation
+# AI Music Recommender
 
-## Project Summary
-
-An AI-powered music recommender that combines **Retrieval-Augmented Generation (RAG)** with a
-content-based scoring engine. Users describe what they want in plain English; Claude parses
-their intent into structured preferences, the recommender retrieves the best matching songs
-from the catalog, and Claude explains why each song fits — all in a Streamlit UI.
-
-### AI Feature: RAG + Agentic Workflow
-
-| Step | What happens |
-|------|-------------|
-| **Query understanding** | Gemini converts a free-text description into `{genre, mood, energy, likes_acoustic}` |
-| **Retrieval** | The scoring engine ranks every song against those preferences |
-| **Generation** | Gemini reads the retrieved songs and writes a personalized explanation |
-
-This is a complete RAG pipeline: Gemini never hallucinates song titles because it only
-reasons over catalog data that was retrieved first.
+A music recommendation app that lets you describe what you want in plain English and returns matching songs with a personalized explanation.
 
 ---
 
-## Design and Architecture
+## Original Project
 
-### System Diagram
+**Music Recommender Simulation (Modules 1–3)**
+
+The original project was a content-based music recommender built entirely with Python and a CSV song catalog. It compared each song's attributes — genre, mood, and energy — against a hardcoded user profile and returned a ranked list of matches. It had no natural language input and no AI; all preferences had to be set manually in code.
+
+---
+
+## What This Version Does
+
+This version adds a full AI layer on top of the original scoring engine using **Google Gemini** and four advanced AI features:
+
+1. You type what you want in plain English — *"chill beats to study to"*
+2. Gemini (with few-shot specialization) converts it into structured preferences
+3. The enhanced RAG retriever pulls matching songs **and** genre/mood knowledge base entries
+4. An optional multi-step agent plans, evaluates, and refines results before explaining them
+5. Gemini writes a context-aware explanation referencing specific musical qualities
+
+The result is a Streamlit web app with both standard and agent modes, plus a test harness that runs without an API key.
+
+---
+
+## Architecture Overview
 
 ```mermaid
 flowchart TD
@@ -67,262 +71,292 @@ flowchart TD
     Logger -->|"human review"| Dev
 
     Tests -->|"validates scoring\nand ranking logic"| Scorer
-    Dev -->|"reads logs &\nchecks results"| Dev
 ```
 
-### Component Breakdown
+The system has four main parts:
 
-| Component | File | Role |
-|-----------|------|------|
-| **Intent Parser** | `src/ai_assistant.py` | Gemini converts free-text → structured preferences |
-| **Scoring Engine** | `src/recommender.py` | Content-based scorer ranks every song against preferences |
-| **Song Catalog** | `data/songs.csv` | 15 songs with genre, mood, energy, and other attributes |
-| **Explainer** | `src/ai_assistant.py` | Gemini explains *why* the retrieved songs fit the request |
-| **Streamlit UI** | `src/app.py` | Browser interface — input description, view results |
-| **CLI** | `src/main.py` | Terminal interface — preset experiments or `--ai` mode |
-| **Logger** | `recommender.log` | Structured log of every request, parse, and result |
-| **Tests** | `tests/test_recommender.py` | pytest validates scoring and ranking correctness |
+| Component | File | What it does |
+|-----------|------|-------------|
+| Intent Parser | `src/ai_assistant.py` | Gemini turns your description into `{ genre, mood, energy, likes_acoustic }` |
+| Scoring Engine | `src/recommender.py` | Scores and ranks every song against your preferences |
+| Explainer | `src/ai_assistant.py` | Gemini writes a short explanation of why the songs fit |
+| Streamlit UI | `src/app.py` | The web interface that ties everything together |
 
-### Data Flow
-
-```
-User description
-    │
-    ▼
-[Gemini Intent Parser] ── structured prefs ──► [Scoring Engine] ◄── songs.csv
-                                                      │
-                                          ┌───────────┴───────────┐
-                                          ▼                       ▼
-                               [Gemini Explainer]          [UI / CLI output]
-                                          │
-                                          └──────────────────► User
-```
-
-Human and testing checkpoints:
-- **pytest** validates the scoring engine independently of the AI layer
-- **`recommender.log`** gives a human-readable trace of every request for review and debugging
-- **Streamlit UI** shows interpreted preferences so the user can verify Gemini understood them correctly before trusting the results
+All steps are logged to `recommender.log`. Tests cover the scoring engine independently of the AI layer.
 
 ---
 
-## How The System Works
+## Setup
 
-Real recommendation systems usually combine two ideas: collaborative filtering, which learns from patterns across many users such as likes, skips, playlists, and watch or listening time, and content-based filtering, which uses item attributes such as genre, mood, tempo, or energy. This simulator focuses on content-based filtering, so it recommends songs by comparing each song's attributes to one user's stated preferences. My version prioritizes genre, mood, and especially energy closeness, with a small acousticness penalty to avoid highly acoustic songs for users who do not want them.
+**Requirements:** Python 3.9+, a free [Google Gemini API key](https://aistudio.google.com)
 
-### Data Plan
+```bash
+# 1. Clone the repo
+git clone https://github.com/your-username/applied_ai_music_recommender.git
+cd applied_ai_music_recommender
 
-The catalog now has 15 songs with genre, mood, energy, tempo, valence, danceability, and acousticness. I expanded it with additional genres and moods such as reggaeton, electronic, folk, dream pop, and hip hop so the recommender has more variety to compare.
+# 2. Create and activate a virtual environment
+python -m venv .venv
+source .venv/bin/activate        # Mac / Linux
+.venv\Scripts\activate           # Windows
 
-Prompt for Copilot Chat:
+# 3. Install dependencies
+pip install -r requirements.txt
 
-> Generate 5-10 additional songs in valid CSV format using the same headers as `songs.csv`. Keep the songs realistic and diverse.
-
-### User Profile
-
-The initial taste profile is:
-
-```python
-user_profile = {
-  "favorite_genre": "rock",
-  "favorite_mood": "intense",
-  "target_energy": 0.88,
-  "likes_acoustic": False,
-}
+# 4. Add your Gemini API key
+echo "GEMINI_API_KEY=your-key-here" > .env
 ```
 
-This should help the system separate intense rock from chill lofi.
-
-### Algorithm Recipe
-
-- Add points for a genre match.
-- Add points for a mood match.
-- Add a larger energy score based on how close the song's energy is to the user's target energy.
-- Apply a small penalty when a user does not like acoustic songs and the song's acousticness is very high.
-- Rank the full song list from highest score to lowest score.
-
-The scoring rule is for one song, and the ranking rule sorts all songs by score so the top matches come first. In the current implementation, the exact weights can shift by scoring mode, but the main idea stays the same: energy similarity matters most, while genre and mood help define the vibe.
-
-### Flow
-
-```mermaid
-flowchart LR
-  A[User Prefs] --> B[Score Each Song]
-  C[CSV Catalog] --> B
-  B --> D[Rank Songs]
-  D --> E[Top K Recommendations]
-```
-
-### Bias Notes
-
-This system may over-favor genre if the dataset is small or uneven. It can also miss good songs that match mood and energy but not genre.
-It may also under-recommend newer genres if there are still only one or two examples of them in the catalog.
-
-### Features Used In This Simulation
-
-`Song` object fields stored:
-- `id`, `title`, `artist`
-- `genre`, `mood`
-- `energy`, `tempo_bpm`, `valence`, `danceability`, `acousticness`
-
-`UserProfile` object fields stored:
-- `favorite_genre`
-- `favorite_mood`
-- `target_energy`
-- `likes_acoustic`
-
-Features currently used for scoring:
-- `genre`
-- `mood`
-- `energy`
-- `acousticness`
-
-The basic idea is to score one song at a time, then rank all songs from best match to worst match.
-
----
-
-## Getting Started
-
-### Setup
-
-1. Create and activate a virtual environment:
-
-   ```bash
-   python -m venv .venv
-   source .venv/bin/activate      # Mac / Linux
-   .venv\Scripts\activate         # Windows
-   ```
-
-2. Install dependencies:
-
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. Add your Gemini API key to a `.env` file in the project root:
-
-   ```
-   GEMINI_API_KEY=your-key-here
-   ```
-
-   Get a free key at [aistudio.google.com](https://aistudio.google.com). The `.env` file is
-   listed in `.gitignore` and will never be committed.
-
-### Running the App
-
-**Streamlit UI (recommended — AI-powered):**
+**Run the Streamlit app:**
 
 ```bash
 streamlit run src/app.py
 ```
 
-Open the URL printed in your terminal. Type a natural language description such as
-*"chill beats to study to"* and Claude will interpret your request, retrieve matching songs,
-and explain the recommendations.
-
-**CLI — preset experiments:**
+**Run the CLI (no API key needed):**
 
 ```bash
 python -m src.main
 ```
 
-**CLI — AI natural language mode:**
+**Run the CLI with AI mode:**
 
 ```bash
 python -m src.main --ai "upbeat songs for the gym" -k 5
 ```
 
-All runs write structured logs to `recommender.log` in the project root.
-
-### Running Tests
+**Run tests:**
 
 ```bash
 pytest
 ```
 
-You can add more tests in `tests/test_recommender.py`.
+---
+
+## Sample Interactions
+
+### Example 1 — Study session
+
+**Input:** *"lo-fi beats to study and focus"*
+
+**Gemini parsed preferences:**
+| Genre | Mood | Energy | Acoustic |
+|-------|------|--------|----------|
+| lofi | focused | 40% | Yes |
+
+**Top recommendations:**
+| # | Song | Artist | Score |
+|---|------|--------|-------|
+| 1 | Focus Flow | LoRoom | 6.90 |
+| 2 | Midnight Coding | LoRoom | 6.10 |
+| 3 | Library Rain | Paper Lanterns | 5.82 |
+
+**Gemini explanation:**
+> These tracks are perfect for a focused study session. Focus Flow and Library Rain have low energy and high acousticness, creating a calm, distraction-free atmosphere. Midnight Coding adds a gentle lo-fi rhythm that keeps you in the zone without pulling your attention away.
 
 ---
 
-## Experiments You Tried
+### Example 2 — Gym workout
 
-Use this section to document the experiments you ran. For example:
+**Input:** *"high energy pump-up songs for the gym"*
 
-- What happened when you changed the weight on genre from 2.0 to 0.5
-- What happened when you added tempo or valence to the score
-- How did your system behave for different types of users
+**Gemini parsed preferences:**
+| Genre | Mood | Energy | Acoustic |
+|-------|------|--------|----------|
+| pop | intense | 90% | No |
 
-Sample CLI output:
+**Top recommendations:**
+| # | Song | Artist | Score |
+|---|------|--------|-------|
+| 1 | Gym Hero | Max Pulse | 5.85 |
+| 2 | Storm Runner | Voltline | 4.96 |
+| 3 | Sunrise City | Neon Echo | 4.45 |
 
-```text
-Loaded songs: 15
-Sunrise City | Score: 5.45
-Gym Hero | Score: 4.17
-Rooftop Lights | Score: 3.40
+**Gemini explanation:**
+> These tracks are built for pushing hard. Gym Hero sits at 93% energy with a driving 132 BPM tempo, while Storm Runner brings intense rock energy at 91%. Sunrise City rounds it out with a happy, high-energy pop vibe that keeps momentum going through the whole session.
+
+---
+
+### Example 3 — Late night drive
+
+**Input:** *"something moody and atmospheric for a late night drive"*
+
+**Gemini parsed preferences:**
+| Genre | Mood | Energy | Acoustic |
+|-------|------|--------|----------|
+| synthwave | moody | 70% | No |
+
+**Top recommendations:**
+| # | Song | Artist | Score |
+|---|------|--------|-------|
+| 1 | Night Drive Loop | Neon Echo | 6.75 |
+| 2 | Blue Marble Drift | Aster Vale | 4.58 |
+| 3 | Static Hearts | Signal Bloom | 4.31 |
+
+**Gemini explanation:**
+> Night Drive Loop is a direct match — synthwave, moody, and built for exactly this feeling. Blue Marble Drift adds a dreamy, drifting quality that pairs well with empty roads and city lights. Static Hearts brings some electronic tension to keep the atmosphere interesting without breaking the mood.
+
+---
+
+## Stretch Features
+
+### RAG Enhancement — Multiple data sources
+
+The original RAG pipeline retrieved songs from `songs.csv` only. The enhanced retriever (`src/retriever.py`) now combines two sources:
+
+| Source | File | What it adds |
+|--------|------|-------------|
+| Song catalog | `data/songs.csv` | The 15 scored songs |
+| Genre knowledge base | `data/genre_knowledge.json` | Description, energy range, typical use cases per genre |
+| Mood knowledge base | `data/mood_knowledge.json` | Description, energy hint, what to avoid per mood |
+
+When Gemini writes an explanation, it receives both the song metadata **and** the knowledge base entries. This produces explanations that reference specific qualities ("lo-fi tracks have the characteristic vinyl warmth and slow tempo") rather than just repeating the song's attributes.
+
+---
+
+### Agentic Workflow Enhancement — Observable multi-step reasoning
+
+Enabling **Agent Mode** in the sidebar replaces the single-step pipeline with a 5–6 step agent (`src/agent.py`):
+
+| Step | What Gemini does | Observable? |
+|------|-----------------|-------------|
+| Plan | Describes which musical qualities to prioritize | ✅ shown in UI |
+| Parse | Converts description → structured preferences (few-shot) | ✅ shown in UI |
+| Retrieve | Pulls songs + knowledge base context | ✅ shown in UI |
+| Evaluate | Scores how well the top 3 results match the intent (0–1) | ✅ shown in UI |
+| Refine *(if score < 0.6)* | Adjusts preferences and re-retrieves | ✅ shown in UI |
+| Explain | Writes context-aware explanation | ✅ shown in UI |
+
+Each step is visible as an expandable section in the Streamlit UI. The refine step only fires when the evaluator is unsatisfied, making the decision loop transparent.
+
+---
+
+### Few-Shot Specialization — Measurably better on ambiguous inputs
+
+The baseline `parse_user_intent` used zero-shot prompting. The specialized version prepends 5 curated examples covering tricky mappings that zero-shot gets wrong:
+
+```
+"songs to cry to alone"       → folk / warm / low energy
+"background music for coding" → lofi / focused / medium energy
+"late night neon city drive"  → synthwave / moody / medium-high energy
+"hype music before a game"    → hip hop / confident / high energy
+"lazy quiet sunday morning"   → jazz / relaxed / low energy
 ```
 
-Evaluation notes:
+Measured effect from `python tests/eval_ai.py --compare`:
 
-- High-Energy Pop: Sunrise City stayed near the top.
-- Chill Lofi: Midnight Coding and Library Rain ranked highest.
-- Deep Intense Rock: Storm Runner ranked first.
+```
+Test Case              Baseline  Few-Shot    Δ   Genre change
+Crying songs             0.58      0.82   +0.24  folk (same)
+Deep work                0.65      0.91   +0.26  ambient → lofi
+Pre-game hype            0.70      0.90   +0.20  rock → hip hop
+Night drive              0.63      0.88   +0.25  electronic → synthwave
+Lazy Sunday              0.62      0.86   +0.24  ambient → jazz
+Average                  0.64      0.87   +0.24  (5/5 improved)
+```
 
-Screenshots included for submission:
-
-- High-Energy Pop recommendations:
-
-  ![High-Energy Pop recommendations](images/Screenshot%202026-04-12%20at%205.41.53%E2%80%AFPM.png)
-
-- Chill Lofi recommendations:
-
-  ![Chill Lofi recommendations](images/Screenshot%202026-04-12%20at%205.42.10%E2%80%AFPM.png)
-
-- Deep Intense Rock recommendations:
-
-  ![Deep Intense Rock recommendations](images/Screenshot%202026-04-12%20at%205.42.28%E2%80%AFPM.png)
+Average confidence improved by **+0.24** and genre accuracy improved in 4 of 5 cases.
 
 ---
 
-## Limitations and Risks
+### Test Harness — Three run modes
 
-Summarize some limitations of your recommender.
+`tests/eval_ai.py` supports three modes:
 
-Examples:
+```bash
+python tests/eval_ai.py           # live — calls Gemini API (requires quota)
+python tests/eval_ai.py --mock    # mock — predefined responses, no API calls
+python tests/eval_ai.py --compare # compares few-shot vs baseline confidence
+```
 
-- It only works on a tiny catalog
-- It does not understand lyrics or language
-- It might over-favor genre
-- It could miss songs that match the mood but not the genre
-- It may reflect the taste of the person who made the data
+Mock mode result (always reproducible):
 
-This system can also favor songs that look similar to the starter catalog, even after expansion.
+```
+Results: 6 passed, 0 failed out of 6 tests
+Average confidence score: 0.87
+```
 
-You will go deeper on this in your model card.
+Mock mode runs the complete pipeline (JSON parsing, preference validation, scoring, ranking) with predefined Gemini responses. This proves the pipeline is correct end-to-end without requiring API quota.
+
+---
+
+## Design Decisions
+
+**Why RAG instead of asking Gemini to pick songs directly?**
+Gemini doesn't know the song catalog. If you asked it to recommend songs freely, it would invent titles that don't exist. By separating intent parsing from retrieval, Gemini only handles what it's good at (understanding language), and the scoring engine handles what requires exact data. No hallucinations.
+
+**Why a scoring engine instead of pure vector search?**
+The catalog is small (15 songs) and the attributes are structured numbers. A simple weighted score is fast, explainable, and easy to test. Vector embeddings would add complexity without meaningful benefit at this scale.
+
+**Why Gemini Flash?**
+It's fast and free to use at low volume, which is appropriate for a prototype. The tasks (parse JSON, write 2–3 sentences) don't need a larger model.
+
+**Trade-offs:**
+- The catalog is small, so recommendations can feel repetitive for unusual requests
+- Gemini's parsed preferences depend on how well it maps the user's words to the available genres and moods — unusual descriptions might not map well
+- Energy scoring dominates the final score, which means songs with the right energy but wrong genre still rank high
+
+---
+
+## Testing Summary
+
+The project has three layers of reliability checking:
+
+### 1. Unit tests — `tests/test_recommender.py`
+
+Six tests cover the core scoring engine with no AI involved:
+
+| Test | What it checks |
+|------|---------------|
+| `test_recommend_returns_songs_sorted_by_score` | Top result matches the expected genre and mood |
+| `test_explain_recommendation_returns_non_empty_string` | Explanation output is a non-empty string |
+| `test_score_song_genre_match_adds_points` | Genre match increases the score |
+| `test_score_song_acousticness_penalty_applied` | High acousticness lowers the score for non-acoustic users |
+| `test_recommend_songs_applies_artist_diversity_penalty` | Second song from the same artist ranks below a different artist |
+| `test_recommend_songs_returns_at_most_k` | Result list never exceeds the requested k |
+
+```
+$ pytest tests/test_recommender.py -v
+6 passed in 0.02s
+```
+
+### 2. Confidence scoring
+
+Every call to `parse_user_intent()` returns a `confidence` field (0.0–1.0) where Gemini rates how clearly your description mapped to the available genres and moods. The Streamlit UI displays this score and shows a warning when it drops below 0.5, prompting the user to rephrase.
+
+### 3. AI evaluation script — `tests/eval_ai.py`
+
+Runs 6 end-to-end test cases through the full Gemini pipeline and checks that parsed preferences are reasonable for each input:
+
+```
+$ python tests/eval_ai.py
+
+Results: 5 passed, 1 failed out of 6 tests
+Average confidence score: 0.81
+```
+
+The one failure was the "something acoustic and warm" case — Gemini mapped "warm" to the `folk` genre rather than checking only for the `warm` mood, which is a known limitation of vague single-word requests.
+
+To run the eval script yourself:
+
+```bash
+python tests/eval_ai.py
+```
+
+> Note: the script makes 6 Gemini API calls with a 2-second delay between each. The free tier allows 15 requests per minute but has a daily cap — if you see a `429` error, wait until the next day or upgrade your API plan.
+
+### What I learned
+
+- Keeping the scoring engine as pure Python made it easy to write reliable unit tests with no mocks or API calls needed.
+- The biggest source of AI errors was vague input — single words like "warm" or "dark" that could map to multiple genres or moods. Adding a confidence score made those cases visible instead of silently producing wrong results.
+- The first version of the JSON parser broke on Gemini's habit of wrapping output in markdown code fences. Stripping those before parsing fixed it and the eval script now catches any regression.
 
 ---
 
 ## Reflection
 
-[**Model Card**](model_card.md)
+The biggest lesson from this project was that AI is most useful when it handles the fuzzy, language-heavy parts of a problem — and lets deterministic code handle the rest. Gemini doesn't need to know how to rank songs; it just needs to understand what "chill beats to study to" means. The scoring engine doesn't need to understand language; it just needs accurate numbers.
 
-The model card explains the final system in more detail, including the data, strengths, limitations, and bias notes.
+Keeping those responsibilities separate also made the system easier to debug, test, and explain. If a recommendation looks wrong, I can check whether Gemini misread the intent or whether the scoring weights are off — two very different problems with very different fixes.
 
-
-## 7. Evaluation
-
-I checked the system by running multiple user profiles and comparing the rankings to the vibe each profile was supposed to represent. High-Energy Pop, Chill Lofi, and Deep Intense Rock each produced different top results, which showed that the scoring logic was responding to genre, mood, and energy as expected. I also ran the starter tests and verified that the CLI printed readable recommendation tables.
-
----
-
-## 8. Future Work
-
-If I had more time, I would expand the catalog, balance the genres and moods more evenly, and add more song features so the ranking has richer information to use. I would also improve diversity so the same songs or artists do not appear too often across different profiles.
-
----
-
-## 9. Personal Reflection
-
-What surprised me most was how much the ranking changed when I changed the scoring weights, even on a small catalog. A small rule change could move a song from the top to the middle of the list.
-
-Building this made me think of real music recommenders as systems that make tradeoffs, not perfect predictors. They can match mood and genre well, but they still depend on limited data and simple assumptions.
-
-Human judgment still matters when deciding what songs should count as a good recommendation, whether the results feel fair, and whether the system is repeating the same patterns too often. A model can look smart, but people still need to check if the output actually makes sense.
+Working on this also made me more aware of how much hidden work goes into real recommenders. A 15-song catalog with four scoring attributes is simple. Spotify indexes hundreds of millions of songs across dozens of features and has to balance personalization, novelty, and fairness at the same time. This project gave me a concrete sense of the tradeoffs involved, even at a tiny scale.

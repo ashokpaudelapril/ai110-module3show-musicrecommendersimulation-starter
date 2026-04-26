@@ -1,0 +1,74 @@
+{
+  "pop": {
+    "description": "Polished, hook-driven music with broad appeal. Features clean production, strong melodies, and high danceability.",
+    "energy_range": [0.6, 0.95],
+    "typical_moods": ["happy", "playful", "confident"],
+    "use_cases": ["parties", "gym workouts", "commuting", "morning energy"]
+  },
+  "lofi": {
+    "description": "Low-fidelity hip hop beats with nostalgic warmth. Often features vinyl crackle, mellow piano, and slow tempos. Creates a cozy, focused atmosphere.",
+    "energy_range": [0.2, 0.55],
+    "typical_moods": ["chill", "focused", "relaxed"],
+    "use_cases": ["studying", "late night coding", "reading", "rainy day focus"]
+  },
+  "rock": {
+    "description": "Guitar-driven music with electric energy. Ranges from stadium anthems to heavy intensity. Great for high-energy moments.",
+    "energy_range": [0.6, 1.0],
+    "typical_moods": ["intense", "confident", "moody"],
+    "use_cases": ["intense workouts", "driving fast", "letting off steam"]
+  },
+  "ambient": {
+    "description": "Atmospheric soundscapes designed for background listening. Minimal melody, long textures, very low energy. Creates calm or meditative environments.",
+    "energy_range": [0.1, 0.4],
+    "typical_moods": ["chill", "dreamy", "relaxed"],
+    "use_cases": ["meditation", "sleep", "deep focus", "yoga"]
+  },
+  "jazz": {
+    "description": "Improvisational music with complex harmonies and swing feel. Ranges from smooth lounge to intense bebop. The classic coffee shop companion.",
+    "energy_range": [0.2, 0.6],
+    "typical_moods": ["relaxed", "warm", "confident"],
+    "use_cases": ["coffee shops", "dinner parties", "late night relaxation", "creative work"]
+  },
+  "synthwave": {
+    "description": "Retro-futuristic electronic music inspired by 80s soundtracks. Features synthesizers, driving basslines, and nostalgic neon atmosphere.",
+    "energy_range": [0.5, 0.85],
+    "typical_moods": ["moody", "tense", "confident"],
+    "use_cases": ["night drives", "late night work", "gaming", "retro vibes"]
+  },
+  "indie pop": {
+    "description": "Melodic alternative pop with an independent spirit. Blends catchy hooks with more experimental production. Energetic but approachable.",
+    "energy_range": [0.55, 0.85],
+    "typical_moods": ["happy", "playful", "dreamy"],
+    "use_cases": ["road trips", "casual hangs", "spring afternoons", "creative energy"]
+  },
+  "reggaeton": {
+    "description": "Latin urban music with a dembow rhythm and heavy bass. High danceability and playful energy. Built for the dance floor.",
+    "energy_range": [0.7, 0.95],
+    "typical_moods": ["playful", "confident", "happy"],
+    "use_cases": ["dancing", "parties", "summer energy", "working out"]
+  },
+  "electronic": {
+    "description": "Broad genre of synthesizer-based music. Can range from tense industrial to euphoric dance. High production polish and driving beats.",
+    "energy_range": [0.6, 0.95],
+    "typical_moods": ["tense", "confident", "moody"],
+    "use_cases": ["clubs", "focused work", "gaming", "late night energy"]
+  },
+  "folk": {
+    "description": "Acoustic, storytelling music rooted in tradition. Warm and intimate with natural instruments. A grounding and reflective listen.",
+    "energy_range": [0.1, 0.45],
+    "typical_moods": ["warm", "relaxed", "dreamy"],
+    "use_cases": ["unwinding", "introspective moments", "campfires", "quiet evenings"]
+  },
+  "dream pop": {
+    "description": "Hazy, atmospheric pop with reverb-heavy guitars and soft vocals. Creates a floating, cinematic feeling somewhere between waking and sleep.",
+    "energy_range": [0.3, 0.65],
+    "typical_moods": ["dreamy", "moody", "warm"],
+    "use_cases": ["daydreaming", "long walks", "late afternoon light", "creative writing"]
+  },
+  "hip hop": {
+    "description": "Rhythm-driven music built on beats and bars. Covers everything from lyrical storytelling to hard-hitting bangers. Confident and expressive.",
+    "energy_range": [0.55, 0.9],
+    "typical_moods": ["confident", "intense", "playful"],
+    "use_cases": ["gym", "commuting", "hyping yourself up", "creative sessions"]
+  }
+}

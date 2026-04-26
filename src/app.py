@@ -4,11 +4,12 @@ import logging
 import os
 from pathlib import Path
 
-import google.generativeai as genai
 import streamlit as st
 from dotenv import load_dotenv
 
 from src.ai_assistant import explain_recommendations, parse_user_intent
+from src.agent import RecommendationAgent
+from src.retriever import retrieve
 from src.recommender import load_songs, recommend_songs
 
 load_dotenv()
@@ -45,6 +46,14 @@ with st.sidebar:
         help="How to weight genre, mood, and energy when scoring songs",
     )
     st.divider()
+    agent_mode = st.checkbox(
+        "Agent Mode",
+        help=(
+            "Uses a multi-step pipeline: plan → parse → retrieve → evaluate → [refine] → explain. "
+            "Shows each reasoning step. Uses 3–4 extra API calls."
+        ),
+    )
+    st.divider()
     st.caption("Logs are written to `recommender.log` in the project root.")
 
 # ── Main ───────────────────────────────────────────────────────────────────────
@@ -69,39 +78,67 @@ if get_recs:
         st.error("Please enter your Gemini API key in the sidebar (or set GEMINI_API_KEY in .env).")
         st.stop()
 
-    genai.configure(api_key=api_key)
-    logger.info("New request — user description: '%.120s'", user_description)
+    os.environ["GEMINI_API_KEY"] = api_key
+    logger.info("New request (agent=%s): '%.120s'", agent_mode, user_description)
 
     try:
         songs = load_songs(str(_DATA_PATH))
-        logger.info("Loaded %d songs from catalog", len(songs))
 
-        # Step 1: Gemini parses natural language into structured preferences (RAG query phase)
-        with st.spinner("Understanding your music taste..."):
-            prefs = parse_user_intent(user_description)
+        # ── Agent Mode ─────────────────────────────────────────────────────────
+        if agent_mode:
+            with st.spinner("Running multi-step agent..."):
+                agent = RecommendationAgent()
+                recommendations, explanation, steps = agent.run(
+                    user_description, songs, k=num_recs, scoring_mode=scoring_mode
+                )
 
-        st.subheader("Interpreted Preferences")
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Genre", prefs["genre"].title())
-        c2.metric("Mood", prefs["mood"].title())
-        c3.metric("Energy", f"{prefs['energy']:.0%}")
-        c4.metric("Acoustic", "Yes" if prefs["likes_acoustic"] else "No")
+            st.subheader("Agent Reasoning Steps")
+            step_icons = {
+                "plan":     "🗺️ Plan",
+                "parse":    "🔍 Parse",
+                "retrieve": "📂 Retrieve",
+                "evaluate": "✅ Evaluate",
+                "refine":   "🔄 Refine",
+                "explain":  "💬 Explain",
+            }
+            for step in steps:
+                label = step_icons.get(step.name, step.name.title())
+                with st.expander(label, expanded=(step.name in ("plan", "evaluate"))):
+                    st.write(step.summary())
 
-        # Step 2: Retrieve matching songs from the catalog
-        recommendations = recommend_songs(prefs, songs, k=num_recs, scoring_mode=scoring_mode)
+            # Pull prefs from the parse step for metrics display
+            parse_step = next((s for s in steps if s.name == "parse"), None)
+            prefs = parse_step.output if parse_step else {}
+
+        # ── Standard Mode ──────────────────────────────────────────────────────
+        else:
+            with st.spinner("Understanding your music taste..."):
+                prefs = parse_user_intent(user_description)
+
+            with st.spinner("Finding and explaining songs..."):
+                recommendations, context = retrieve(prefs, songs, k=num_recs, scoring_mode=scoring_mode)
+                explanation = explain_recommendations(user_description, prefs, recommendations, context=context)
+
         logger.info("Produced %d recommendations (mode=%s)", len(recommendations), scoring_mode)
 
-        # Step 3: Gemini explains why the retrieved songs fit the request (RAG generation phase)
-        with st.spinner("Writing your personalized explanation..."):
-            explanation = explain_recommendations(user_description, prefs, recommendations)
+        # ── Shared display ─────────────────────────────────────────────────────
+        if prefs:
+            st.subheader("Interpreted Preferences")
+            c1, c2, c3, c4, c5 = st.columns(5)
+            c1.metric("Genre", prefs.get("genre", "—").title())
+            c2.metric("Mood",  prefs.get("mood",  "—").title())
+            c3.metric("Energy", f"{prefs.get('energy', 0):.0%}")
+            c4.metric("Acoustic", "Yes" if prefs.get("likes_acoustic") else "No")
+            confidence = prefs.get("confidence", 0.5)
+            c5.metric("AI Confidence", f"{confidence:.0%}")
+            if confidence < 0.5:
+                st.warning("Low confidence — Gemini wasn't sure how to map your request. Try being more specific.")
 
         st.info(f"**Why these songs?** {explanation}")
 
         st.subheader(f"Top {len(recommendations)} Songs")
         for rank, (song, score, reasons) in enumerate(recommendations, 1):
-            with st.expander(
-                f"{rank}. **{song['title']}** — {song['artist']}  ·  score: {score:.2f}"
-            ):
+            with st.expander(f"{rank}. **{song['title']}** — {song['artist']}  ·  score: {score:.2f}"):
                 col_a, col_b = st.columns(2)
                 with col_a:
                     st.write(f"**Genre:** {song['genre']}")
