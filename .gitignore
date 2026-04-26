@@ -16,3 +16,6 @@ venv/
 
 # Environment variables (never commit secrets)
 .env
+
+# Runtime logs
+recommender.log

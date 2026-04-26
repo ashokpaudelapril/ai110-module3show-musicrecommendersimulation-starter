@@ -2,6 +2,9 @@
 
 A music recommendation app that lets you describe what you want in plain English and returns matching songs with a personalized explanation.
 
+**GitHub:** [github.com/your-username/applied_ai_music_recommender](https://github.com/your-username/applied_ai_music_recommender)
+**Demo walkthrough:** [Add your Loom link here after recording]
+
 ---
 
 ## Original Project
@@ -360,3 +363,24 @@ The biggest lesson from this project was that AI is most useful when it handles 
 Keeping those responsibilities separate also made the system easier to debug, test, and explain. If a recommendation looks wrong, I can check whether Gemini misread the intent or whether the scoring weights are off — two very different problems with very different fixes.
 
 Working on this also made me more aware of how much hidden work goes into real recommenders. A 15-song catalog with four scoring attributes is simple. Spotify indexes hundreds of millions of songs across dozens of features and has to balance personalization, novelty, and fairness at the same time. This project gave me a concrete sense of the tradeoffs involved, even at a tiny scale.
+
+---
+
+## Portfolio Statement
+
+This project shows that I approach AI engineering the same way I approach any software problem: build the simplest thing that can be measured and tested before adding complexity. The scoring engine has full unit test coverage. The AI layer is separated cleanly from retrieval logic. The agent loop shows its reasoning instead of hiding it. And the eval harness runs without an API key, so reliability can always be checked.
+
+I'm comfortable working at the boundary between language models and traditional software — knowing which layer to trust for which job, and how to make both layers independently verifiable. That's the skill this project most clearly demonstrates.
+
+---
+
+## Demo Screenshots
+
+**High-Energy Pop recommendations (original CLI):**
+![High-Energy Pop](assets/demo-high-energy-pop.png)
+
+**Chill Lofi recommendations (original CLI):**
+![Chill Lofi](assets/demo-chill-lofi.png)
+
+**Deep Intense Rock recommendations (original CLI):**
+![Deep Intense Rock](assets/demo-intense-rock.png)
