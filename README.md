@@ -13,10 +13,95 @@ from the catalog, and Claude explains why each song fits — all in a Streamlit 
 |------|-------------|
 | **Query understanding** | Gemini converts a free-text description into `{genre, mood, energy, likes_acoustic}` |
 | **Retrieval** | The scoring engine ranks every song against those preferences |
-| **Generation** | Claude reads the retrieved songs and writes a personalized explanation |
+| **Generation** | Gemini reads the retrieved songs and writes a personalized explanation |
 
 This is a complete RAG pipeline: Gemini never hallucinates song titles because it only
 reasons over catalog data that was retrieved first.
+
+---
+
+## Design and Architecture
+
+### System Diagram
+
+```mermaid
+flowchart TD
+    User(["🧑 User\n(natural language)"])
+
+    subgraph AI ["AI Layer — Gemini"]
+        Parser["Intent Parser\nparse_user_intent()"]
+        Explainer["Explainer\nexplain_recommendations()"]
+    end
+
+    subgraph Core ["Core Recommender"]
+        Scorer["Scoring Engine\nrecommend_songs()"]
+        Catalog[("Song Catalog\ndata/songs.csv\n15 songs")]
+    end
+
+    subgraph Interfaces ["Interfaces"]
+        UI["Streamlit UI\nsrc/app.py"]
+        CLI["CLI\nsrc/main.py"]
+    end
+
+    subgraph Reliability ["Reliability & Observability"]
+        Logger["Logger\nrecommender.log"]
+        Tests["pytest\ntests/test_recommender.py"]
+    end
+
+    Dev(["👩‍💻 Developer /\nInstructor"])
+
+    User -->|"describe music mood"| Parser
+    Parser -->|"{ genre, mood, energy,\nlikes_acoustic }"| Scorer
+    Catalog -->|"15 songs"| Scorer
+    Scorer -->|"ranked songs + scores"| Explainer
+    Scorer -->|"ranked songs + scores"| UI
+    Scorer -->|"ranked songs + scores"| CLI
+    Explainer -->|"natural language\nexplanation"| UI
+    Explainer -->|"natural language\nexplanation"| CLI
+    UI -->|"recommendations"| User
+    CLI -->|"recommendations"| User
+
+    Parser -->|"logs each step"| Logger
+    Scorer -->|"logs each step"| Logger
+    Explainer -->|"logs each step"| Logger
+    Logger -->|"human review"| Dev
+
+    Tests -->|"validates scoring\nand ranking logic"| Scorer
+    Dev -->|"reads logs &\nchecks results"| Dev
+```
+
+### Component Breakdown
+
+| Component | File | Role |
+|-----------|------|------|
+| **Intent Parser** | `src/ai_assistant.py` | Gemini converts free-text → structured preferences |
+| **Scoring Engine** | `src/recommender.py` | Content-based scorer ranks every song against preferences |
+| **Song Catalog** | `data/songs.csv` | 15 songs with genre, mood, energy, and other attributes |
+| **Explainer** | `src/ai_assistant.py` | Gemini explains *why* the retrieved songs fit the request |
+| **Streamlit UI** | `src/app.py` | Browser interface — input description, view results |
+| **CLI** | `src/main.py` | Terminal interface — preset experiments or `--ai` mode |
+| **Logger** | `recommender.log` | Structured log of every request, parse, and result |
+| **Tests** | `tests/test_recommender.py` | pytest validates scoring and ranking correctness |
+
+### Data Flow
+
+```
+User description
+    │
+    ▼
+[Gemini Intent Parser] ── structured prefs ──► [Scoring Engine] ◄── songs.csv
+                                                      │
+                                          ┌───────────┴───────────┐
+                                          ▼                       ▼
+                               [Gemini Explainer]          [UI / CLI output]
+                                          │
+                                          └──────────────────► User
+```
+
+Human and testing checkpoints:
+- **pytest** validates the scoring engine independently of the AI layer
+- **`recommender.log`** gives a human-readable trace of every request for review and debugging
+- **Streamlit UI** shows interpreted preferences so the user can verify Gemini understood them correctly before trusting the results
 
 ---
 
