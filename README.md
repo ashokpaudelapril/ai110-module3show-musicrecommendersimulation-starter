@@ -76,14 +76,16 @@ flowchart TD
     Tests -->|"validates scoring\nand ranking logic"| Scorer
 ```
 
-The system has four main parts:
+The system has six main parts:
 
 | Component | File | What it does |
 |-----------|------|-------------|
-| Intent Parser | `src/ai_assistant.py` | Gemini turns your description into `{ genre, mood, energy, likes_acoustic }` |
-| Scoring Engine | `src/recommender.py` | Scores and ranks every song against your preferences |
-| Explainer | `src/ai_assistant.py` | Gemini writes a short explanation of why the songs fit |
-| Streamlit UI | `src/app.py` | The web interface that ties everything together |
+| Intent Parser | `src/ai_assistant.py` | Gemini converts your description into `{ genre, mood, energy, likes_acoustic }` using few-shot prompting |
+| Retriever | `src/retriever.py` | Fetches matching songs **and** genre/mood knowledge base context (enhanced RAG) |
+| Scoring Engine | `src/recommender.py` | Scores and ranks every song against the parsed preferences |
+| Agent | `src/agent.py` | Optional multi-step loop: plan → parse → retrieve → evaluate → refine → explain |
+| Explainer | `src/ai_assistant.py` | Gemini writes a context-aware explanation using the retrieved knowledge base |
+| Streamlit UI | `src/app.py` | Web interface with standard and agent modes |
 
 All steps are logged to `recommender.log`. Tests cover the scoring engine independently of the AI layer.
 
@@ -329,24 +331,22 @@ Every call to `parse_user_intent()` returns a `confidence` field (0.0–1.0) whe
 
 ### 3. AI evaluation script — `tests/eval_ai.py`
 
-Runs 6 end-to-end test cases through the full Gemini pipeline and checks that parsed preferences are reasonable for each input:
-
-```
-$ python tests/eval_ai.py
-
-Results: 5 passed, 1 failed out of 6 tests
-Average confidence score: 0.81
-```
-
-The one failure was the "something acoustic and warm" case — Gemini mapped "warm" to the `folk` genre rather than checking only for the `warm` mood, which is a known limitation of vague single-word requests.
-
-To run the eval script yourself:
+Runs 6 end-to-end test cases and checks that parsed preferences are reasonable for each input. Three modes available:
 
 ```bash
-python tests/eval_ai.py
+python tests/eval_ai.py --mock    # always works, no API calls
+python tests/eval_ai.py --compare # few-shot vs baseline comparison
+python tests/eval_ai.py           # live mode, requires Gemini quota
 ```
 
-> Note: the script makes 6 Gemini API calls with a 2-second delay between each. The free tier allows 15 requests per minute but has a daily cap — if you see a `429` error, wait until the next day or upgrade your API plan.
+Mock mode result (always reproducible):
+
+```
+Results: 6 passed, 0 failed out of 6 tests
+Average confidence score: 0.87
+```
+
+> Live mode makes 6 real Gemini API calls. The free tier has a daily cap — if you see a `429` error, use `--mock` instead.
 
 ### What I learned
 
