@@ -19,3 +19,9 @@ venv/
 
 # Runtime logs
 recommender.log
+
+# Legacy / scratch
+images/
+reflection.md
+generate_slides.py
+assets/presentation.pptx

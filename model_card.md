@@ -8,12 +8,12 @@
 
 ## 1. What This System Does
 
-VibeFinder lets you describe what music you want in plain English and returns ranked song recommendations with a personalized explanation. It combines a content-based scoring engine (pure Python) with a Google Gemini AI layer that handles language understanding and explanation generation.
+VibeFinder lets you describe what music you want in plain English and returns ranked song recommendations with a personalized explanation. It combines a content-based scoring engine (pure Python) with a Claude AI layer that handles language understanding and explanation generation.
 
 **RAG pipeline:**
-1. Gemini parses your natural language description into structured preferences
+1. Claude parses your natural language description into structured preferences
 2. The scoring engine retrieves matching songs from a 15-song catalog
-3. Gemini explains why the songs fit, using a knowledge base of genre and mood descriptions
+3. Claude explains why the songs fit, using a knowledge base of genre and mood descriptions
 
 An optional **Agent Mode** adds a planning, evaluation, and refinement loop on top of this pipeline.
 
@@ -21,8 +21,8 @@ An optional **Agent Mode** adds a planning, evaluation, and refinement loop on t
 
 ## 2. Base Model
 
-- **AI model:** Google Gemini 2.0 Flash via the `google-genai` SDK
-- **Specialization method:** Few-shot prompting — 5 curated examples guide Gemini toward more accurate genre/mood mappings for ambiguous inputs (e.g. "deep work music" → lofi, not ambient)
+- **AI model:** Anthropic Claude (`claude-haiku-4-5`) via the `anthropic` Python SDK
+- **Specialization method:** Few-shot prompting — 5 curated examples guide Claude toward more accurate genre/mood mappings for ambiguous inputs (e.g. "deep work music" → lofi, not ambient)
 - **No fine-tuning** was performed; specialization is achieved through prompt engineering
 
 ---
@@ -61,7 +61,7 @@ The song catalog is intentionally small and manually curated. It covers 12 genre
 
 **Energy dominance:** The scoring engine weights energy closeness heavily. Songs with the right energy but wrong genre often outrank better genre matches with slightly off energy. This creates a weak filter bubble around energetic tracks.
 
-**Gemini mapping quality:** When a user's description is vague or uses vocabulary outside the training data (e.g. "sigma playlist"), Gemini may map to a genre that technically fits the words but not the intent. The confidence score is the main guardrail here.
+**Claude mapping quality:** When a user's description is vague or uses vocabulary outside the training data (e.g. "sigma playlist"), Claude may map to a genre that technically fits the words but not the intent. The confidence score is the main guardrail here.
 
 **Catalog bias:** The catalog was built by one person, so it reflects one perspective on what "lofi" or "jazz" sounds like. A more diverse catalog would produce fairer recommendations across different cultural backgrounds and tastes.
 
@@ -117,12 +117,12 @@ Few-shot prompting improved average confidence by 0.24 and produced more accurat
 AI tools (Claude Code) were used throughout this project for:
 - Writing boilerplate code (data classes, CSV loading, logging setup)
 - Designing the RAG pipeline and agent loop architecture
-- Debugging the `google-genai` SDK migration from the deprecated `google-generativeai` package
+- Migrating the AI layer from Google Gemini to the Anthropic Claude API
 - Drafting the README and model card structure
 
 All AI-generated code was reviewed, tested, and adjusted. Key decisions — what the scoring weights should be, which test cases to include, what the few-shot examples should cover — were made by me based on what I observed the system getting wrong.
 
-The most useful AI contribution was catching the markdown code fence issue in the JSON parser (Gemini wrapping responses in ` ```json ``` `), which would have taken much longer to debug manually.
+The most useful AI contribution was catching the markdown code fence issue in the JSON parser (Claude wrapping responses in ` ```json ``` `), which would have taken much longer to debug manually.
 
 ---
 
@@ -130,7 +130,7 @@ The most useful AI contribution was catching the markdown code fence issue in th
 
 Building this project changed how I think about AI in software. The most important lesson was that AI is most useful at the fuzzy edges of a problem — understanding language, explaining results — while deterministic code handles the precise, testable parts. Keeping those two layers separate made everything easier to build, debug, and prove correct.
 
-I also learned that confidence scores are more useful than they first appear. They don't just rate Gemini's certainty; they surface when the system boundary between "things Gemini understands" and "things the catalog supports" is being stretched. A low confidence score is a meaningful signal, not just a number.
+I also learned that confidence scores are more useful than they first appear. They don't just rate the model's certainty; they surface when the system boundary between "things Claude understands" and "things the catalog supports" is being stretched. A low confidence score is a meaningful signal, not just a number.
 
 The few-shot experiments surprised me. I expected the examples to help a little. They helped a lot — not just by raising confidence, but by shifting the genre mapping in a meaningful direction on every ambiguous case I tested. That made the difference between a system that sometimes gets lucky and one that behaves predictably.
 
