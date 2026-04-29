@@ -17,9 +17,7 @@ import logging
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
-from google.genai import types
-
-from src.ai_assistant import (
+from ai_assistant import (
     _MODEL,
     _SYSTEM_PROMPT,
     _get_client,
@@ -27,7 +25,7 @@ from src.ai_assistant import (
     explain_recommendations,
     parse_user_intent,
 )
-from src.retriever import retrieve
+from retriever import retrieve
 
 logger = logging.getLogger(__name__)
 
@@ -123,18 +121,19 @@ class RecommendationAgent:
     # ── Private step implementations ──────────────────────────────────────────
 
     def _plan(self, description: str) -> str:
-        """Gemini describes what musical qualities to prioritize."""
+        """Claude describes what musical qualities to prioritize."""
         client = _get_client()
-        response = client.models.generate_content(
+        response = client.messages.create(
             model=_MODEL,
-            contents=(
+            max_tokens=60,
+            system=[{"type": "text", "text": _SYSTEM_PROMPT, "cache_control": {"type": "ephemeral"}}],
+            messages=[{"role": "user", "content": (
                 f'User wants: "{description}"\n\n'
                 "In one sentence, describe what musical characteristics "
                 "(genre, energy level, mood, acoustic vs electronic) to prioritize."
-            ),
-            config=types.GenerateContentConfig(system_instruction=_SYSTEM_PROMPT),
+            )}],
         )
-        return response.text.strip()
+        return response.content[0].text.strip()
 
     def _evaluate(
         self,
@@ -148,18 +147,19 @@ class RecommendationAgent:
             for s, _, _ in recommendations[:3]
         )
         client = _get_client()
-        response = client.models.generate_content(
+        response = client.messages.create(
             model=_MODEL,
-            contents=(
+            max_tokens=100,
+            system=[{"type": "text", "text": _SYSTEM_PROMPT, "cache_control": {"type": "ephemeral"}}],
+            messages=[{"role": "user", "content": (
                 f'User asked for: "{description}"\n'
                 f"Top retrieved songs:\n{top3}\n\n"
                 "Rate how well these match the request.\n"
                 'Reply with ONLY valid JSON: {"score": 0.0–1.0, "feedback": "one sentence"}\n'
                 "score=1.0 means perfect match, score=0.0 means completely wrong."
-            ),
-            config=types.GenerateContentConfig(system_instruction=_SYSTEM_PROMPT),
+            )}],
         )
-        raw = response.text.strip()
+        raw = response.content[0].text.strip()
         if raw.startswith("```"):
             raw = raw.split("```")[1].lstrip("json").strip()
         try:
@@ -172,19 +172,20 @@ class RecommendationAgent:
     def _refine(self, description: str, prefs: Dict, feedback: str) -> Dict:
         """Adjusts preferences based on the evaluator's feedback."""
         client = _get_client()
-        response = client.models.generate_content(
+        response = client.messages.create(
             model=_MODEL,
-            contents=(
+            max_tokens=100,
+            system=[{"type": "text", "text": _SYSTEM_PROMPT, "cache_control": {"type": "ephemeral"}}],
+            messages=[{"role": "user", "content": (
                 f'Original request: "{description}"\n'
                 f"Current preferences: {json.dumps(prefs)}\n"
                 f"Evaluator feedback: {feedback}\n\n"
                 "Adjust the preferences to better match the request.\n"
                 "Reply with ONLY valid JSON: "
                 "genre, mood, energy (0.0–1.0), likes_acoustic (true/false), confidence (0.0–1.0)"
-            ),
-            config=types.GenerateContentConfig(system_instruction=_SYSTEM_PROMPT),
+            )}],
         )
-        raw = response.text.strip()
+        raw = response.content[0].text.strip()
         if raw.startswith("```"):
             raw = raw.split("```")[1].lstrip("json").strip()
         try:

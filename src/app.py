@@ -7,10 +7,10 @@ from pathlib import Path
 import streamlit as st
 from dotenv import load_dotenv
 
-from src.ai_assistant import explain_recommendations, parse_user_intent
-from src.agent import RecommendationAgent
-from src.retriever import retrieve
-from src.recommender import load_songs, recommend_songs
+from ai_assistant import explain_recommendations, parse_user_intent
+from agent import RecommendationAgent
+from retriever import retrieve
+from recommender import load_songs, recommend_songs
 
 load_dotenv()
 
@@ -33,12 +33,6 @@ st.set_page_config(page_title="AI Music Recommender", page_icon="🎵", layout="
 # ── Sidebar ────────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.header("Settings")
-    api_key_input = st.text_input(
-        "Google Gemini API Key",
-        type="password",
-        value=os.getenv("GEMINI_API_KEY", ""),
-        help="Get your key at aistudio.google.com",
-    )
     num_recs = st.slider("Number of recommendations", 1, 10, 5)
     scoring_mode = st.selectbox(
         "Scoring mode",
@@ -58,7 +52,7 @@ with st.sidebar:
 
 # ── Main ───────────────────────────────────────────────────────────────────────
 st.title("🎵 AI Music Recommender")
-st.caption("Describe what you're in the mood for — Gemini will find the perfect tracks.")
+st.caption("Describe what you're in the mood for — Claude will find the perfect tracks.")
 
 user_description = st.text_area(
     "What kind of music are you looking for?",
@@ -73,12 +67,10 @@ get_recs = st.button(
 )
 
 if get_recs:
-    api_key = api_key_input.strip() or os.getenv("GEMINI_API_KEY", "")
+    api_key = os.getenv("ANTHROPIC_API_KEY", "")
     if not api_key:
-        st.error("Please enter your Gemini API key in the sidebar (or set GEMINI_API_KEY in .env).")
+        st.error("ANTHROPIC_API_KEY not found. Add it to your .env file.")
         st.stop()
-
-    os.environ["GEMINI_API_KEY"] = api_key
     logger.info("New request (agent=%s): '%.120s'", agent_mode, user_description)
 
     try:
@@ -132,7 +124,7 @@ if get_recs:
             confidence = prefs.get("confidence", 0.5)
             c5.metric("AI Confidence", f"{confidence:.0%}")
             if confidence < 0.5:
-                st.warning("Low confidence — Gemini wasn't sure how to map your request. Try being more specific.")
+                st.warning("Low confidence — Claude wasn't sure how to map your request. Try being more specific.")
 
         st.info(f"**Why these songs?** {explanation}")
 

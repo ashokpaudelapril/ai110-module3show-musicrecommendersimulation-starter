@@ -15,7 +15,7 @@ import logging
 from pathlib import Path
 from typing import Dict, List, Tuple
 
-from src.recommender import recommend_songs
+from recommender import recommend_songs
 
 logger = logging.getLogger(__name__)
 

@@ -53,9 +53,9 @@ def run_ai_mode(description: str, k: int = 5) -> None:
         print("Error: run `pip install google-genai` first.")
         return
 
-    if not os.getenv("GEMINI_API_KEY"):
-        logger.error("GEMINI_API_KEY not set in environment or .env file")
-        print("Error: set GEMINI_API_KEY in your .env file or environment.")
+    if not os.getenv("ANTHROPIC_API_KEY"):
+        logger.error("ANTHROPIC_API_KEY not set in environment or .env file")
+        print("Error: set ANTHROPIC_API_KEY in your .env file or environment.")
         return
     songs = load_songs(str(_DATA_PATH))
     logger.info("Loaded %d songs from catalog", len(songs))

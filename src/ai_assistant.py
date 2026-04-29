@@ -1,11 +1,11 @@
-"""Gemini-powered intent parsing and recommendation explanation."""
+"""Claude-powered intent parsing and recommendation explanation."""
 
 import json
 import logging
+import os
 from typing import Dict, List, Optional, Tuple
 
-from google import genai
-from google.genai import types
+import anthropic
 
 logger = logging.getLogger(__name__)
 
@@ -29,12 +29,9 @@ Available music attributes:
 - likes_acoustic: boolean, whether the user prefers acoustic-sounding tracks
 - confidence: float 0.0–1.0, how clearly the request maps to the available options"""
 
-_MODEL = "gemini-2.0-flash"
+_MODEL = "claude-haiku-4-5"
 
 # ── Few-shot examples for specialization ──────────────────────────────────────
-# These guide Gemini on tricky or ambiguous requests that zero-shot prompting
-# tends to map inconsistently. Measurable effect: higher confidence scores and
-# more accurate genre/mood mapping on edge-case inputs.
 _FEW_SHOT_EXAMPLES = [
     (
         "songs to cry to alone at night",
@@ -67,9 +64,8 @@ def _build_few_shot_block() -> str:
     return "\n".join(lines)
 
 
-def _get_client() -> genai.Client:
-    import os
-    return genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+def _get_client() -> anthropic.Anthropic:
+    return anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
 
 def _parse_prefs_json(raw: str) -> Dict:
@@ -104,7 +100,7 @@ def parse_user_intent(description: str, few_shot: bool = True) -> Dict:
 
     few_shot_block = _build_few_shot_block() + "\nNow convert the following:\n" if few_shot else ""
 
-    prompt = (
+    user_content = (
         f"{few_shot_block}"
         f'User: "{description}"\n\n'
         "Reply with ONLY valid JSON using exactly these keys:\n"
@@ -113,13 +109,18 @@ def parse_user_intent(description: str, few_shot: bool = True) -> Dict:
     )
 
     client = _get_client()
-    response = client.models.generate_content(
+    response = client.messages.create(
         model=_MODEL,
-        contents=prompt,
-        config=types.GenerateContentConfig(system_instruction=_SYSTEM_PROMPT),
+        max_tokens=100,
+        system=[{
+            "type": "text",
+            "text": _SYSTEM_PROMPT,
+            "cache_control": {"type": "ephemeral"},
+        }],
+        messages=[{"role": "user", "content": user_content}],
     )
-    raw = response.text.strip()
-    logger.debug("Gemini raw response: %s", raw)
+    raw = response.content[0].text.strip()
+    logger.debug("Claude raw response: %s", raw)
 
     try:
         prefs = _parse_prefs_json(raw)
@@ -133,7 +134,7 @@ def parse_user_intent(description: str, few_shot: bool = True) -> Dict:
         )
         return prefs
     except (json.JSONDecodeError, ValueError, KeyError) as exc:
-        logger.error("Failed to parse Gemini response '%s': %s", raw, exc)
+        logger.error("Failed to parse Claude response '%s': %s", raw, exc)
         raise ValueError(f"Could not parse music preferences: {exc}") from exc
 
 
@@ -146,7 +147,7 @@ def explain_recommendations(
     """
     Generates a natural language explanation for the recommended songs.
 
-    If `context` is provided (from the enhanced RAG retriever), Gemini uses
+    If `context` is provided (from the enhanced RAG retriever), Claude uses
     genre and mood descriptions from the knowledge base to write richer,
     more specific explanations than it could from song metadata alone.
     """
@@ -175,7 +176,7 @@ def explain_recommendations(
                 f"  Energy hint: {mood_ctx.get('energy_hint', '')}\n"
             )
 
-    prompt = (
+    user_content = (
         f'User asked for: "{user_description}"\n'
         f"Interpreted as: genre={preferences['genre']}, mood={preferences['mood']}, "
         f"energy={preferences['energy']:.2f}, likes_acoustic={preferences['likes_acoustic']}"
@@ -187,11 +188,16 @@ def explain_recommendations(
     )
 
     client = _get_client()
-    response = client.models.generate_content(
+    response = client.messages.create(
         model=_MODEL,
-        contents=prompt,
-        config=types.GenerateContentConfig(system_instruction=_SYSTEM_PROMPT),
+        max_tokens=150,
+        system=[{
+            "type": "text",
+            "text": _SYSTEM_PROMPT,
+            "cache_control": {"type": "ephemeral"},
+        }],
+        messages=[{"role": "user", "content": user_content}],
     )
-    explanation = response.text.strip()
+    explanation = response.content[0].text.strip()
     logger.info("Explanation generated (%d chars, context=%s)", len(explanation), context is not None)
     return explanation

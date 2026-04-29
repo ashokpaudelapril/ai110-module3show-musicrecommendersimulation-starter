@@ -2,8 +2,8 @@
 
 A music recommendation app that lets you describe what you want in plain English and returns matching songs with a personalized explanation.
 
-**GitHub:** [github.com/your-username/applied_ai_music_recommender](https://github.com/your-username/applied_ai_music_recommender)
-**Demo walkthrough:** [Add your Loom link here after recording]
+**GitHub:** [ashokpaudelapril/ai110-module3show-musicrecommendersimulation-starter](https://github.com/ashokpaudelapril/ai110-module3show-musicrecommendersimulation-starter)
+**Demo walkthrough:** [Loom walkthrough](https://www.loom.com/share/d38f13e695184ab2bcc0b93dc8d00591)
 
 ---
 
